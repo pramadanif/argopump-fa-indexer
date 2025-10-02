@@ -2,8 +2,13 @@ import { IndexerService } from './services/indexer.ts';
 import { prisma } from './index.ts';
 
 async function testBullPumpIndexer() {
-  console.log('🧪 Testing BullPump Indexer...');
-  console.log('📍 Tracking contract: 0x4660906d4ed4062029a19e989e51c814aa5b0711ef0ba0433b5f7487cb03b257');
+  const contractAddress = process.env.BULLPUMP_CONTRACT_ADDRESS;
+  if (!contractAddress) {
+    throw new Error('BULLPUMP_CONTRACT_ADDRESS environment variable is not set');
+  }
+  
+  console.log('🧪 Testing ArgoPump Indexer...');
+  console.log(`📍 Tracking contract: ${contractAddress}`);
   
   try {
     // Test database connection

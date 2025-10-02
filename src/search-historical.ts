@@ -1,9 +1,13 @@
 import { Aptos, AptosConfig, Network } from '@aptos-labs/ts-sdk';
 
 async function searchHistorical() {
-  console.log('🔍 Searching for historical BullPump transactions...');
+  console.log('🔍 Searching for historical ArgoPump transactions...');
   
-  const BULLPUMP_CONTRACT = "0x4660906d4ed4062029a19e989e51c814aa5b0711ef0ba0433b5f7487cb03b257";
+  const BULLPUMP_CONTRACT = process.env.BULLPUMP_CONTRACT_ADDRESS;
+  if (!BULLPUMP_CONTRACT) {
+    throw new Error('BULLPUMP_CONTRACT_ADDRESS environment variable is not set');
+  }
+  
   const TOKEN_FACTORY_MODULE = `${BULLPUMP_CONTRACT}::token_factory`;
   const BONDING_CURVE_MODULE = `${BULLPUMP_CONTRACT}::bonding_curve_pool`;
   

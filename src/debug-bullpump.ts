@@ -1,9 +1,18 @@
 import { Aptos, AptosConfig, Network } from '@aptos-labs/ts-sdk';
 
-async function debugBullPump() {
-  console.log('🔍 Debugging BullPump Contract...\n');
+import dotenv from 'dotenv';
+
+// Load environment variables
+dotenv.config();
+
+async function debugArgoPump() {
+  console.log('🔍 Debugging ArgoPump Contract...\n');
   
-  const BULLPUMP_CONTRACT = "0x4660906d4ed4062029a19e989e51c814aa5b0711ef0ba0433b5f7487cb03b257";
+  const BULLPUMP_CONTRACT = process.env.BULLPUMP_CONTRACT_ADDRESS;
+  if (!BULLPUMP_CONTRACT) {
+    console.error('❌ BULLPUMP_CONTRACT_ADDRESS environment variable is not set');
+    process.exit(1);
+  }
   
   // Try both networks
   const networks = [
@@ -125,10 +134,9 @@ async function debugBullPump() {
         break; // Found the transaction
         
       } catch (error) {
-        console.log(`❌ Transaction not found on ${name}`);
       }
     }
   }
 }
 
-debugBullPump().catch(console.error);
+debugArgoPump().catch(console.error);

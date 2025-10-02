@@ -1,10 +1,18 @@
 import { PrismaClient } from '@prisma/client';
 import { Aptos, AptosConfig, Network } from '@aptos-labs/ts-sdk';
+import dotenv from 'dotenv';
+
+// Load environment variables
+dotenv.config();
 
 const prisma = new PrismaClient();
 
 async function testSpecificTransaction() {
-  const txHash = '0xc80d1596e157de769af8467094a79a429b00c7921157cf19ee96ab4401d256cd';
+  const txHash = process.argv[2];
+  if (!txHash) {
+    console.error('❌ Please provide a transaction hash as a command line argument');
+    process.exit(1);
+  }
   
   console.log('🧪 Testing specific BullPump transaction...');
   console.log('📍 Transaction:', txHash);
@@ -13,9 +21,9 @@ async function testSpecificTransaction() {
     await prisma.$connect();
     console.log('✅ Database connected');
 
-    const config = new AptosConfig({ 
+    const config = new AptosConfig({
       network: Network.TESTNET,
-      fullnode: 'https://fullnode.testnet.aptoslabs.com/v1'
+      fullnode: process.env.APTOS_NODE_URL || 'https://fullnode.testnet.aptoslabs.com/v1'
     });
     const aptos = new Aptos(config);
 
@@ -45,7 +53,11 @@ async function testSpecificTransaction() {
     }
 
     // Test if our indexer would detect this transaction
-    const BULLPUMP_CONTRACT = "0x4660906d4ed4062029a19e989e51c814aa5b0711ef0ba0433b5f7487cb03b257";
+    const BULLPUMP_CONTRACT = process.env.BULLPUMP_CONTRACT_ADDRESS;
+    if (!BULLPUMP_CONTRACT) {
+      console.error('❌ BULLPUMP_CONTRACT_ADDRESS environment variable is not set');
+      process.exit(1);
+    }
     const TOKEN_FACTORY_MODULE = `${BULLPUMP_CONTRACT}::token_factory`;
     
     let isBullPump = false;

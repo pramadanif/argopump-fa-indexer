@@ -1,22 +1,34 @@
 import { PrismaClient } from '@prisma/client';
 import { Aptos, AptosConfig, Network } from '@aptos-labs/ts-sdk';
+import dotenv from 'dotenv';
+
+// Load environment variables
+dotenv.config();
 
 const prisma = new PrismaClient();
 
 async function jumpToVersion() {
-  const targetVersion = 6876866764; // Version of the new transaction
+  const targetVersion = process.argv[2] ? parseInt(process.argv[2]) : NaN;
+  if (isNaN(targetVersion)) {
+    console.error('❌ Please provide a valid version number as a command line argument');
+    process.exit(1);
+  }
   
-  console.log(`🚀 Jumping to version ${targetVersion} to find BullPump transaction...`);
+  console.log(`🚀 Jumping to version ${targetVersion} to find ArgoPump transaction...`);
   
-  const BULLPUMP_CONTRACT = "0x4660906d4ed4062029a19e989e51c814aa5b0711ef0ba0433b5f7487cb03b257";
+  const BULLPUMP_CONTRACT = process.env.BULLPUMP_CONTRACT_ADDRESS;
+  if (!BULLPUMP_CONTRACT) {
+    throw new Error('BULLPUMP_CONTRACT_ADDRESS environment variable is not set');
+  }
+  
   const TOKEN_FACTORY_MODULE = `${BULLPUMP_CONTRACT}::token_factory`;
   
   try {
     await prisma.$connect();
     
-    const config = new AptosConfig({ 
+    const config = new AptosConfig({
       network: Network.TESTNET,
-      fullnode: 'https://fullnode.testnet.aptoslabs.com/v1'
+      fullnode: process.env.APTOS_NODE_URL || 'https://fullnode.testnet.aptoslabs.com/v1'
     });
     const aptos = new Aptos(config);
     
