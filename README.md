@@ -248,100 +248,102 @@ For production deployment to a cloud VM (e.g., AWS EC2, Google Cloud, or Digital
 ## 🗄 Database Schema
 
 ### FA (Fungible Asset)
-```sql
-- address (String, Primary Key)
-- name (String)
-- symbol (String)
-- creator (String)
-- created_at (DateTime)
-- total_supply (BigInt)
-- decimals (Int)
-- icon_url (String, Nullable)
-- description (Text, Nullable)
-- website (String, Nullable)
-- twitter (String, Nullable)
-- telegram (String, Nullable)
-- discord (String, Nullable)
-- is_verified (Boolean, default: false)
-- is_active (Boolean, default: true)
-- volume_24h (Decimal)
-- price_change_24h (Decimal)
-- current_price (Decimal)
-- market_cap (Decimal)
-- liquidity (Decimal)
-- holders_count (Int)
-- last_updated (DateTime)
-```
-
-### Trades
-```sql
-- id (String, Primary Key)
-- fa_address (String, Foreign Key to FA)
-- type (Enum: BUY/SELL)
-- price (Decimal)
-- amount (Decimal)
-- value (Decimal)
-- user_address (String)
-- tx_hash (String)
-- block_number (BigInt)
-- timestamp (DateTime)
-- pool_address (String)
-- fee (Decimal)
-- fee_recipient (String, Nullable)
-- metadata (JSON, Nullable)
-```
-
-### Pools
-```sql
-- address (String, Primary Key)
-- fa_address (String, Foreign Key to FA)
-- creator (String)
-- created_at (DateTime)
-- apt_amount (Decimal)
-- token_amount (Decimal)
-- liquidity (Decimal)
-- fee_percentage (Decimal)
-- is_active (Boolean, default: true)
-- is_graduated (Boolean, default: false)
-- graduated_at (DateTime, Nullable)
-- last_updated (DateTime)
-- volume_24h (Decimal)
-- tx_count_24h (Int)
-- apr_7d (Decimal)
-- apr_30d (Decimal)
-```
-
-### Users
-```sql
-- address (String, Primary Key)
-- created_at (DateTime)
-- last_active (DateTime)
-- total_trades (Int)
-- total_volume (Decimal)
-- favorite_tokens (String[], Array of FA addresses)
-- settings (JSON, User preferences)
+```prisma
+model FA {
+  address      String    @id
+  name         String
+  symbol       String
+  creator      String
+  decimals     Int       @default(8)
+  max_supply   Decimal?
+  icon_uri     String?
+  project_uri  String?
+  mint_fee_per_unit Decimal @default(0)
+  created_at   DateTime  @default(now())
+  
+  trades       Trade[]
+  pool_stats   PoolStats?
+  events       FAEvent[]
+}
 ```
 
 ### Trade
-```sql
-- id (String, Primary Key)
-- transaction_hash (String, Unique)
-- fa_address (String, Foreign Key)
-- user_address (String)
-- apt_amount (Decimal)
-- token_amount (Decimal)
-- price_per_token (Decimal)
-- created_at (DateTime)
+```prisma
+model Trade {
+  id               String   @id @default(cuid())
+  transaction_hash String   @unique
+  transaction_version String?
+  
+  // Basic trade info
+  fa_address       String
+  user_address     String
+  apt_amount       Decimal  // APT paid (including fees)
+  token_amount     Decimal  // Tokens received
+  price_per_token  Decimal  // APT per token
+  fee_amount       Decimal  @default(0) // Fee paid
+  
+  // Trade type
+  trade_type       TradeType @default(BUY)
+  
+  created_at       DateTime @default(now())
+  
+  fa FA @relation(fields: [fa_address], references: [address])
+}
 ```
 
 ### PoolStats
-```sql
-- fa_address (String, Primary Key)
-- apt_reserves (Decimal)
-- total_volume (Decimal)
-- trade_count (Int)
-- is_graduated (Boolean)
-- updated_at (DateTime)
+```prisma
+model PoolStats {
+  fa_address      String   @id
+  apt_reserves    Decimal
+  total_volume    Decimal  @default(0)
+  trade_count     Int      @default(0)
+  is_graduated    Boolean  @default(false)
+  graduation_threshold Decimal @default(2150000000000) // 21500 APT in octas
+  dex_pool_addr   String?  // DEX pool address after graduation (0x... 66 characters)
+  
+  updated_at      DateTime @updatedAt
+  
+  fa FA @relation(fields: [fa_address], references: [address])
+}
+```
+
+### FAEvent
+```prisma
+model FAEvent {
+  id               String   @id @default(cuid())
+  transaction_hash String
+  transaction_version String?
+  
+  fa_address       String
+  event_type       EventType
+  event_data       Json
+  
+  created_at       DateTime @default(now())
+  
+  fa FA @relation(fields: [fa_address], references: [address])
+  
+  @@index([fa_address, event_type])
+  @@index([transaction_hash])
+}
+```
+
+### Enums
+```prisma
+enum TradeType {
+  BUY
+  SELL
+  MINT
+  BURN
+}
+
+enum EventType {
+  CREATE_FA
+  MINT_FA  
+  BURN_FA
+  BUY_TOKENS
+  POOL_GRADUATED
+}
 ```
 
 ## Configuration
@@ -353,12 +355,12 @@ For production deployment to a cloud VM (e.g., AWS EC2, Google Cloud, or Digital
 | `DATABASE_URL` | PostgreSQL connection string | Required |
 | `DIRECT_URL` | Direct PostgreSQL connection | Required |
 | `APTOS_NODE_URL` | Aptos fullnode endpoint | `https://fullnode.mainnet.aptoslabs.com/v1` |
-| `argopump_CONTRACT_ADDRESS` | argopump contract address | `0x4660906d4ed4062029a19e989e51c814aa5b0711ef0ba0433b5f7487cb03b257` |
+| `argopump_CONTRACT_ADDRESS` | argopump contract address | `0xf937c2d4a8ed5d30141b4911593543dd5975eab3a0e6d75105783205996e516f` |
 | `PORT` | Server port | `3000` |
 
 ### Important Notes
 
-1. **Contract Address**: The indexer is configured to track contract `0x4660906d4ed4062029a19e989e51c814aa5b0711ef0ba0433b5f7487cb03b257` with modules:
+1. **Contract Address**: The indexer is configured to track contract `0xf937c2d4a8ed5d30141b4911593543dd5975eab3a0e6d75105783205996e516f` with modules:
    - `argopump::token_factory` - for FA creation, minting, and burning
    - `argopump::bonding_curve_pool` - for token purchases via bonding curve
 
